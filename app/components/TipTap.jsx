@@ -56,6 +56,7 @@ function MenuBar({ editor, viewSource, toggleView }) {
         canCode: editor.can().chain().focus().toggleCode().run(),
         isLink: editor.isActive('link'),
         isImage: editor.isActive('image'),
+
       })
     }
 
@@ -116,22 +117,27 @@ function MenuBar({ editor, viewSource, toggleView }) {
   // Image handling functions
   const handleImageClick = () => {
     // Check if we're editing an existing image
-    const imageAttrs = editor.getAttributes('image')
-    
-    if (editorState.isImage && imageAttrs.src) {
-      // Editing existing image
-      setImageUrl(imageAttrs.src || '')
-      setImageAlt(imageAttrs.alt || '')
-      setImageWidth(imageAttrs.width || '')
-      setImageHeight(imageAttrs.height || '')
+    const { from, to } = editor.state.selection
+    let imageNode = null
+
+    editor.state.doc.nodesBetween(from, to, (node) => {
+      if (node.type.name === 'image') {
+        imageNode = node
+      }
+    })
+
+    if (imageNode && imageNode.attrs?.src) {
+      setImageUrl(imageNode.attrs.src || '')
+      setImageAlt(imageNode.attrs.alt || '')
+      setImageWidth(imageNode.attrs.width || '')
+      setImageHeight(imageNode.attrs.height || '')
     } else {
-      // Creating new image
       setImageUrl('')
       setImageAlt('')
-      setImageWidth('')
-      setImageHeight('')
+      setImageWidth('300')
+      setImageHeight('200')
     }
-    
+
     setImageModalActive(true)
   }
 
@@ -147,8 +153,13 @@ function MenuBar({ editor, viewSource, toggleView }) {
     if (imageHeight) imageAttrs.height = imageHeight
     
     if (editorState.isImage) {
-      // Update existing image
-      editor.chain().focus().updateAttributes('image', imageAttrs).run()
+      // Update existing image - delete current and insert new with updated attributes
+      const { from, to } = editor.state.selection
+      editor.chain()
+        .focus()
+        .deleteRange({ from, to })
+        .setImage(imageAttrs)
+        .run()
     } else {
       // Insert new image
       editor.chain().focus().setImage(imageAttrs).run()
@@ -173,7 +184,6 @@ function MenuBar({ editor, viewSource, toggleView }) {
       const formData = new FormData()
       formData.append('image', blob)
       
-      // Replace with your actual API endpoint
       const response = await fetch('/api/upload-image', {
         method: 'POST',
         body: formData,

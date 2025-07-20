@@ -22,6 +22,14 @@
     height: auto;
     display: block;
     margin: 1rem 0;
+    border-radius: 4px;
+    transition: border 0.2s ease;
+    
+    // Selected image border
+    &.ProseMirror-selectednode {
+      border: 3px solid #007ace;
+      box-shadow: 0 0 0 1px rgba(0, 122, 206, 0.2);
+    }
   }
 
   // Existing styles below...
