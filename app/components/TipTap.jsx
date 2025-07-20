@@ -8,8 +8,20 @@ import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import HardBreak from '@tiptap/extension-hard-break'
 import Link from '@tiptap/extension-link'
+import OrderedList from '@tiptap/extension-ordered-list'
 
-import { TextBoldIcon, TextItalicIcon, ImageIcon } from '@shopify/polaris-icons'
+import { 
+  TextBoldIcon, 
+  TextItalicIcon, 
+  ImageIcon, 
+  LinkIcon,
+  ListBulletedIcon,
+  ListNumberedIcon,
+  CodeIcon,
+  UndoIcon,
+  RedoIcon,
+  TextUnderlineIcon
+} from '@shopify/polaris-icons'
 import { ButtonGroup, Button, Modal, TextField, FormLayout, DropZone, Thumbnail } from '@shopify/polaris'
 
 // === MenuBar Component ===
@@ -229,45 +241,175 @@ function MenuBar({ editor, viewSource, toggleView }) {
 
   if (!editor) return null
 
-  const buttonGroup = (
-    <ButtonGroup variant="segmented">
-      <Button onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editorState.canBold}>
-        <TextBoldIcon className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editorState.canItalic}>
-        <TextItalicIcon className="w-4 h-4" />
-      </Button>
-      <Button onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editorState.canStrike}>S</Button>
-      <Button onClick={() => editor.chain().focus().toggleCode().run()} disabled={!editorState.canCode}>C</Button>
-      <Button onClick={() => editor.chain().focus().unsetAllMarks().run()}>Clear Marks</Button>
-      <Button onClick={() => editor.chain().focus().clearNodes().run()}>Clear Nodes</Button>
+  const toolbarStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    backgroundColor: '#f6f6f7',
+    borderRadius: '8px',
+    border: '1px solid #e1e3e5',
+    marginBottom: '16px',
+    flexWrap: 'wrap'
+  }
 
-      <Button onClick={() => editor.chain().focus().setParagraph().run()} className={editorState.isParagraph ? 'is-active' : ''}>P</Button>
-      <Button onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={editorState.isHeading1 ? 'is-active' : ''}>H1</Button>
-      <Button onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={editorState.isHeading2 ? 'is-active' : ''}>H2</Button>
-      <Button onClick={() => editor.chain().focus().toggleBulletList().run()} className={editorState.isBulletList ? 'is-active' : ''}>B</Button>
-      <Button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={editorState.isOrderedList ? 'is-active' : ''}>N</Button>
-      <Button onClick={() => editor.chain().focus().toggleCodeBlock().run()} className={editorState.isCodeBlock ? 'is-active' : ''}>&lt;/&gt;</Button>
-      <Button onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editorState.isBlockquote ? 'is-active' : ''}>&ldquo;&rdquo;</Button>
-      <Button onClick={() => editor.chain().focus().setHorizontalRule().run()}>―</Button>
-      <Button onClick={() => editor.chain().focus().setHardBreak().run()}>↵</Button>
-      <Button onClick={() => editor.chain().focus().undo().run()} disabled={!editorState.canUndo}>Undo</Button>
-      <Button onClick={() => editor.chain().focus().redo().run()} disabled={!editorState.canRedo}>Redo</Button>
-      <Button onClick={handleLinkClick} pressed={editorState.isLink}>
-        Link
-      </Button>
-      <Button onClick={handleImageClick} pressed={editorState.isImage}>
-        <ImageIcon className="w-4 h-4" />
-      </Button>
-      <Button onClick={toggleView} size="slim">
-        {viewSource ? 'Switch to Editor Mode' : 'View Source Code'}
-      </Button>
-    </ButtonGroup>
-  )
+  const separatorStyle = {
+    width: '1px',
+    height: '24px',
+    backgroundColor: '#e1e3e5',
+    margin: '0 4px'
+  }
 
   return (
     <>
-      {buttonGroup}
+      <div style={toolbarStyle}>
+        {/* Text Format Dropdown */}
+        <select 
+          style={{
+            border: 'none',
+            background: 'transparent',
+            fontSize: '14px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onChange={(e) => {
+            const value = e.target.value
+            if (value === 'paragraph') editor.chain().focus().setParagraph().run()
+            else if (value === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run()
+            else if (value === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run()
+            else if (value === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }}
+          value={
+            editorState.isHeading1 ? 'h1' :
+            editorState.isHeading2 ? 'h2' :
+            editorState.isHeading3 ? 'h3' :
+            'paragraph'
+          }
+        >
+          <option value="paragraph">Paragraph</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+        </select>
+
+        <div style={separatorStyle}></div>
+
+        {/* Text Formatting */}
+        <ButtonGroup variant="segmented">
+          <Button 
+            onClick={() => editor.chain().focus().toggleBold().run()} 
+            disabled={!editorState.canBold}
+            pressed={editorState.isBold}
+            size="slim"
+          >
+            <TextBoldIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+          <Button 
+            onClick={() => editor.chain().focus().toggleItalic().run()} 
+            disabled={!editorState.canItalic}
+            pressed={editorState.isItalic}
+            size="slim"
+          >
+            <TextItalicIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+          <Button 
+            onClick={() => editor.chain().focus().toggleStrike().run()} 
+            disabled={!editorState.canStrike}
+            pressed={editorState.isStrike}
+            size="slim"
+          >
+            <TextUnderlineIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+        </ButtonGroup>
+
+        <div style={separatorStyle}></div>
+
+        {/* Text Color - placeholder */}
+        <Button size="slim">
+          <span style={{ color: '#000', fontSize: '16px' }}>A</span>
+          <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
+        </Button>
+
+        <div style={separatorStyle}></div>
+
+        {/* Lists */}
+        <ButtonGroup variant="segmented">
+          <Button 
+            onClick={() => editor.chain().focus().toggleBulletList().run()} 
+            pressed={editorState.isBulletList}
+            size="slim"
+          >
+            <ListBulletedIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+          <Button 
+            onClick={() => editor.chain().focus().toggleOrderedList().run()} 
+            pressed={editorState.isOrderedList}
+            size="slim"
+          >
+            <ListNumberedIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+        </ButtonGroup>
+
+        <div style={separatorStyle}></div>
+
+        {/* Links and Media */}
+        <ButtonGroup variant="segmented">
+          <Button 
+            onClick={handleLinkClick} 
+            pressed={editorState.isLink}
+            size="slim"
+          >
+            <LinkIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+          <Button 
+            onClick={handleImageClick} 
+            pressed={editorState.isImage}
+            size="slim"
+          >
+            <ImageIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+        </ButtonGroup>
+
+        <div style={separatorStyle}></div>
+
+        {/* Code and Quote */}
+        <ButtonGroup variant="segmented">
+          <Button 
+            onClick={() => editor.chain().focus().toggleCode().run()} 
+            disabled={!editorState.canCode}
+            pressed={editorState.isCode}
+            size="slim"
+          >
+            <CodeIcon style={{ width: '16px', height: '16px' }} />
+          </Button>
+          <Button 
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()} 
+            pressed={editorState.isCodeBlock}
+            size="slim"
+          >
+            {'</>'}
+          </Button>
+        </ButtonGroup>
+
+        <div style={separatorStyle}></div>
+
+        {/* More options */}
+        <Button size="slim">
+          <span style={{ fontSize: '16px' }}>⋯</span>
+        </Button>
+
+        <div style={separatorStyle}></div>
+
+        {/* Source toggle */}
+        <Button 
+          onClick={toggleView} 
+          size="slim"
+          pressed={viewSource}
+        >
+          {'</>'}
+        </Button>
+      </div>
       <Modal
         open={linkModalActive}
         onClose={handleLinkCancel}
@@ -410,6 +552,7 @@ export default function TipTap({ content, getUpdatedHtmlContent }) {
       StarterKit.configure({
         hardBreak: false,
         link: false,
+        orderedList: false, // Disable default OrderedList
       }),
       TextStyleKit,
       Image,
@@ -418,9 +561,14 @@ export default function TipTap({ content, getUpdatedHtmlContent }) {
         openOnClick: false,
         linkOnPaste: true,
         HTMLAttributes: {
-          rel: '',
+          rel: 'noopener noreferrer',
           class: 'custom-link',
           style: 'color: blue; text-decoration: underline;',
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          style: 'list-style-type: decimal;'
         },
       }),
       TextAlign.configure({
