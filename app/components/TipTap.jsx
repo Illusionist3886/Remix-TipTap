@@ -9,8 +9,8 @@ import TextAlign from '@tiptap/extension-text-align'
 import HardBreak from '@tiptap/extension-hard-break'
 import Link from '@tiptap/extension-link'
 
-import { TextBoldIcon, TextItalicIcon, LinkIcon } from '@shopify/polaris-icons'
-import { ButtonGroup, Button, Modal, TextField, FormLayout } from '@shopify/polaris'
+import { TextBoldIcon, TextItalicIcon, ImageIcon } from '@shopify/polaris-icons'
+import { ButtonGroup, Button, Modal, TextField, FormLayout, DropZone, Thumbnail } from '@shopify/polaris'
 
 // === MenuBar Component ===
 function MenuBar({ editor, viewSource, toggleView }) {
@@ -18,6 +18,15 @@ function MenuBar({ editor, viewSource, toggleView }) {
   const [linkModalActive, setLinkModalActive] = useState(false)
   const [linkText, setLinkText] = useState('')
   const [linkUrl, setLinkUrl] = useState('')
+  
+  // Image modal state
+  const [imageModalActive, setImageModalActive] = useState(false)
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageAlt, setImageAlt] = useState('')
+  const [imageWidth, setImageWidth] = useState('')
+  const [imageHeight, setImageHeight] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
     if (!editor) return
@@ -46,6 +55,7 @@ function MenuBar({ editor, viewSource, toggleView }) {
         canStrike: editor.can().chain().focus().toggleStrike().run(),
         canCode: editor.can().chain().focus().toggleCode().run(),
         isLink: editor.isActive('link'),
+        isImage: editor.isActive('image'),
       })
     }
 
@@ -103,15 +113,88 @@ function MenuBar({ editor, viewSource, toggleView }) {
     setLinkUrl('')
   }
 
+  // Image handling functions
+  const handleImageClick = () => {
+    // Check if we're editing an existing image
+    const imageAttrs = editor.getAttributes('image')
+    
+    if (editorState.isImage && imageAttrs.src) {
+      // Editing existing image
+      setImageUrl(imageAttrs.src || '')
+      setImageAlt(imageAttrs.alt || '')
+      setImageWidth(imageAttrs.width || '')
+      setImageHeight(imageAttrs.height || '')
+    } else {
+      // Creating new image
+      setImageUrl('')
+      setImageAlt('')
+      setImageWidth('')
+      setImageHeight('')
+    }
+    
+    setImageModalActive(true)
+  }
+
+  const handleImageSubmit = () => {
+    if (!imageUrl) return
+    
+    const imageAttrs = {
+      src: imageUrl,
+      alt: imageAlt || '',
+    }
+    
+    if (imageWidth) imageAttrs.width = imageWidth
+    if (imageHeight) imageAttrs.height = imageHeight
+    
+    if (editorState.isImage) {
+      // Update existing image
+      editor.chain().focus().updateAttributes('image', imageAttrs).run()
+    } else {
+      // Insert new image
+      editor.chain().focus().setImage(imageAttrs).run()
+    }
+    
+    handleImageCancel()
+  }
+
+  const handleImageCancel = () => {
+    setImageModalActive(false)
+    setImageUrl('')
+    setImageAlt('')
+    setImageWidth('')
+    setImageHeight('')
+    setUploadedFiles([])
+    setIsUploading(false)
+  }
+
+  const handleFileUpload = async (files) => {
+    setIsUploading(true)
+    setUploadedFiles(files)
+    
+    // Simulate file upload - in real app, you'd upload to your server/cloud storage
+    const file = files[0]
+    if (file) {
+      // Create a local URL for preview (in production, upload to server first)
+      const fileUrl = URL.createObjectURL(file)
+      setImageUrl(fileUrl)
+      
+      // Set default alt text based on filename
+      const fileName = file.name.split('.')[0]
+      setImageAlt(fileName.replace(/[-_]/g, ' '))
+    }
+    
+    setIsUploading(false)
+  }
+
   if (!editor) return null
 
   const buttonGroup = (
     <ButtonGroup variant="segmented">
       <Button onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editorState.canBold}>
-        <TextBoldIcon />
+        <TextBoldIcon className="w-4 h-4" />
       </Button>
       <Button onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editorState.canItalic}>
-        <TextItalicIcon />
+        <TextItalicIcon className="w-4 h-4" />
       </Button>
       <Button onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editorState.canStrike}>S</Button>
       <Button onClick={() => editor.chain().focus().toggleCode().run()} disabled={!editorState.canCode}>C</Button>
@@ -131,6 +214,9 @@ function MenuBar({ editor, viewSource, toggleView }) {
       <Button onClick={() => editor.chain().focus().redo().run()} disabled={!editorState.canRedo}>Redo</Button>
       <Button onClick={handleLinkClick} pressed={editorState.isLink}>
         Link
+      </Button>
+      <Button onClick={handleImageClick} pressed={editorState.isImage}>
+        <ImageIcon className="w-4 h-4" />
       </Button>
       <Button onClick={toggleView} size="slim">
         {viewSource ? 'Switch to Editor Mode' : 'View Source Code'}
@@ -181,6 +267,91 @@ function MenuBar({ editor, viewSource, toggleView }) {
               type="url"
               required
             />
+          </FormLayout>
+        </Modal.Section>
+      </Modal>
+      
+      <Modal
+        open={imageModalActive}
+        onClose={handleImageCancel}
+        title="Add/Edit Image"
+        primaryAction={{
+          content: 'Save Image',
+          onAction: handleImageSubmit,
+          disabled: !imageUrl,
+        }}
+        secondaryActions={[
+          {
+            content: 'Cancel',
+            onAction: handleImageCancel,
+          },
+          ...(editorState.isImage ? [{
+            content: 'Remove Image',
+            onAction: () => {
+              editor.chain().focus().deleteSelection().run()
+              handleImageCancel()
+            },
+            destructive: true,
+          }] : []),
+        ]}
+      >
+        <Modal.Section>
+          <FormLayout>
+            <div>
+                <p style={{ marginBottom: '8px', fontWeight: '500' }}>Upload Image</p>
+                <DropZone
+                  onDrop={handleFileUpload}
+                  accept="image/*"
+                  type="image"
+                  disabled={isUploading}
+                >
+                  {uploadedFiles.length > 0 ? (
+                    <div>
+                      <Thumbnail
+                        source={imageUrl}
+                        alt={imageAlt || 'Uploaded image'}
+                        size="large"
+                      />
+                      <p>File uploaded successfully!</p>
+                    </div>
+                  ) : (
+                    <DropZone.FileUpload actionTitle="Choose file" actionHint="or drag and drop" />
+                  )}
+                </DropZone>
+              </div>
+              
+              <TextField
+                label="Image URL"
+                value={imageUrl}
+                onChange={setImageUrl}
+                placeholder="https://example.com/image.jpg or upload file above"
+                helpText="You can either upload a file or enter an image URL"
+              />
+              
+              <TextField
+                label="Alt Text"
+                value={imageAlt}
+                onChange={setImageAlt}
+                placeholder="Describe the image for accessibility"
+                helpText="Important for screen readers and SEO"
+              />
+              
+                <TextField
+                  label="Width"
+                  value={imageWidth}
+                  onChange={setImageWidth}
+                  placeholder="300"
+                  suffix="px"
+                  type="number"
+                />
+                <TextField
+                  label="Height"
+                  value={imageHeight}
+                  onChange={setImageHeight}
+                  placeholder="200"
+                  suffix="px"
+                  type="number"
+                />
           </FormLayout>
         </Modal.Section>
       </Modal>
