@@ -167,23 +167,54 @@ function MenuBar({ editor, viewSource, toggleView }) {
     setIsUploading(false)
   }
 
+  const uploadImageToAPI = async (blob) => {
+    try {
+      return 'https://polaris-react.shopify.com/images/shopify-logo.svg'; // dummy
+      const formData = new FormData()
+      formData.append('image', blob)
+      
+      // Replace with your actual API endpoint
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      return data.url // Assuming API returns { url: 'https://...' }
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      throw error
+    }
+  }
+
   const handleFileUpload = async (files) => {
     setIsUploading(true)
     setUploadedFiles(files)
     
-    // Simulate file upload - in real app, you'd upload to your server/cloud storage
-    const file = files[0]
-    if (file) {
-      // Create a local URL for preview (in production, upload to server first)
-      const fileUrl = URL.createObjectURL(file)
-      setImageUrl(fileUrl)
-      
-      // Set default alt text based on filename
-      const fileName = file.name.split('.')[0]
-      setImageAlt(fileName.replace(/[-_]/g, ' '))
+    try {
+      const file = files[0]
+      if (file) {
+        // Upload to API and get the returned URL
+        const uploadedImageUrl = await uploadImageToAPI(file)
+        setImageUrl(uploadedImageUrl)
+        
+        // Set default alt text based on filename
+        const fileName = file.name.split('.')[0]
+        setImageAlt(fileName.replace(/[-_]/g, ' '))
+      }
+    } catch (error) {
+      // Handle upload error
+      console.error('Failed to upload image:', error)
+      // You might want to show an error message to the user
+      alert('Failed to upload image. Please try again.')
+      setUploadedFiles([])
+    } finally {
+      setIsUploading(false)
     }
-    
-    setIsUploading(false)
   }
 
   if (!editor) return null
