@@ -401,9 +401,9 @@ function MenuBar({ editor, viewSource, toggleView }) {
 }
 
 // === TipTap Component ===
-export default function TipTap() {
+export default function TipTap({ content, getUpdatedHtmlContent }) {
   const [viewSource, setViewSource] = useState(false)
-  const [htmlContent, setHtmlContent] = useState('')
+  const [htmlContent, setHtmlContent] = useState(content)
 
   const editor = useEditor({
     extensions: [
@@ -428,15 +428,14 @@ export default function TipTap() {
       }),
     ],
     immediatelyRender: false,
-    content: `
-      <h2>Hi there,</h2>
-      <p>This is <strong>Tiptap</strong>. Enjoy!</p>
-    `,
+    content: htmlContent,
     onUpdate: ({ editor }) => {
+      const newContent = editor.getHTML()
+      getUpdatedHtmlContent(newContent)
       if (viewSource) {
-        setHtmlContent(editor.getHTML())
+        setHtmlContent(newContent)
       }
-    },
+    }
   })
 
   const toggleView = () => {
